@@ -1,0 +1,226 @@
+---
+title: "Addressing the Practical Pain Points of R Analytics"
+author: "Neil Berg, Ph.D. pre-employed, 84.51"
+date: "April 27, 2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+## R makes the latest, best-documented high-level analytics tasks simple. *Unfortunately, it also makes simple tasks difficult.*
+
+Why? It has questionable defaults and hidden contexts. Parts of it *evolved* instead of being *designed*.  
+
+We will talk about our personal (opinionated!) practices for using R.  
+These are largely derived from personal experience answering R questions for marketing and reporting groups.  
+    
+<br>  
+
+
+###Expectations: 
+
+#### You will know **some** of these practices.
+
+#### You should NOT know **all** of these practices.
+
+#### You will actively share your thoughts on the topic/practice/experience!
+
+<br>  
+
+#### You will know workarounds to make your R experience capable and frustration-free.
+![Ready for fun.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/MonsterTrabant.JPG)  
+  
+
+  
+## Outline
+### R is not quite ready when you get it.  
+
+- "R is so mathy that it is hard to interact with"  
+- General startups: stringsAsFactors and scipen  
+- Source in or set as Rprofile 
+
+### R makes some simple things more complicated than they should be.
+
+- "I can't copy and paste my output!"
+- "I want to output to Excel" (openxlsx)
+- "Dates don't work"  
+- "R isn't performing the function correctly"  
+  
+### R is tuned for compatiblity over speed. Fix this!  
+- For loops are usually fine.  
+- You can get over the RAM issues.  
+- Use a faster version of R. It's SIMPLE.  
+
+### "I gave up on R because it made me angry"
+- "R isn't performing the function correctly!"  
+- Rstudio has fixed most of your problems recently  
+  
+  
+# How R is a bit broken when you install it
+![Sometimes you need to help yourself.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/Trabant.JPG)  
+
+## A preface:
+For Windows non-admin installations, install to "C:\something" or you are entering a world of pain.
+
+
+## "R is so mathy that it is hard to interact with": stringsAsFactors 
+
+If you create an R dataframe, it will assume that your string entry is a factor.
+
+"#> invalid factor level, NA generated"
+
+```{r options1, echo = TRUE}
+options(stringsAsFactors = FALSE)
+
+```
+
+## "R is so mathy that it is hard to interact with": scientific notation penalty 
+All numeric output comes as scientific notation.
+
+##### It's running the default, which limits you to 5 digits. 
+```{r options3, echo = TRUE}
+options(scipen = NULL) 
+print((100000))
+```
+```{r options4, echo = TRUE}
+options(scipen = 999)
+print((100000))
+```
+
+## What you want as your startup file  
+
+These are worthy of:  
+
+- 1. being in your .RProfile or 
+- 2. In an sourced-in script that you cite before all of your programs or
+- 3. just throw them at the top of your scripts
+
+```{r options, echo = TRUE}
+options(stringsAsFactors = FALSE)
+options(scipen = 999)
+
+```
+### What's a .RProfile?   
+  
+Your .Rprofile is an  R script that runs each time R runs and they can be found within R_HOME, HOME and the project's home directory.  
+Find them with getwd().  
+  
+### How to source-in a file?
+This example is what I evolved into in a typical office environment.
+
+source("S:/jsmith/loadlibraries.R") # housed on shared network drive -- holds all library()s and options
+
+source("U:/jsmith/loadfunctions.R") # housed in personal folder to keep obscured from network
+
+source("U:/jsmith/sqlconnectscript.R") # housed in personal folder to keep obscured from network
+
+
+## R makes some simple things really hard.
+![Simple things need to work, even if there are reasons they need workarounds.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/BrakeLights.JPG)  
+
+## "I can't copy and paste my output!" (1)  
+You see what you want to copy from the output window, but you copy without retaining columns.  
+```{r echo = TRUE}  
+df <- data.frame(1:5, c(2,3,2,4,6), c(2,3,1,9,6), c(2,3,2,4,9), c(2,3,2,4,7), c(2,3,2,4,8))  
+cor(df)  
+```  
+
+Option 1: Don't copy and paste, just output into CSV/TSV/xlsx  
+If **not** huge, use tidyverse: write_tsv or write_csv  
+If **huge**, use data.table::fwrite
+
+Option 2: R2HTML  
+```{r cp1, echo = TRUE}  
+df <- data.frame(1:5, c(2,3,2,4,6), c(2,3,1,9,6), c(2,3,2,4,9), c(2,3,2,4,7), c(2,3,2,4,8))  
+library(R2HTML)  
+HTMLStart(outdir="c:/tmprdata/", file="myreport1", extension="html",  
+          echo=FALSE, HTMLframe=TRUE)  
+cor(df)  
+HTMLStop()  
+```  
+file:///C:/tmprdata/myreport1.html</h6>
+
+
+## "Forget all that complicated stuff, this report needs to read/write from Excel"  
+Most-Googled packages: *xlsReadWrite, xlsx, writexl, XLConnect, Readxl* are options but use:  
+
+openxlsx does it all: read/ write, uses tabs. Can even apply excel styles (e.g., commas,  dollars, percentages)
+
+Imagine 3 output tables to go into a report.  
+# To write out onto separate sheets  
+      wb <- createWorkbook()  
+  ## Add 3 worksheets  
+      addWorksheet(wb, "cust")  
+      addWorksheet(wb, "rev")  
+      addWorksheet(wb, "skuqty")  
+  ## Need data on worksheet to see all headers and footers  
+      writeData(wb, sheet = 1, cust)  
+      writeData(wb, sheet = 2, rev)  
+      writeData(wb, sheet = 3, skuqty)  
+## Save workbook  
+saveWorkbook(wb, paste0("c:/temprdata/writeout1.xlsx"), overwrite = TRUE)  
+
+
+Aside: Reading in dates rom Excel? Excel dates are the number of days since Dec 30, 1899.  
+Get to a real date in R using this: as.Date(42705, origin = "1899-12-30")  
+
+##R and speed
+![It really can go fast, you may just have to change a few things.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/AudiTrabant.JPG)  
+
+
+### "Can I really use a for loop?"  
+What are you doing? The answer is usually YES, unless you are doing some enormous artificial staged tasks.  
+R has a bad habit of doing structural checks on its data. It will evaluate a column each time you change its structure. This can be pretty slow for certain (usually contrived) situations.  
+- Create a full object structure (i.e., a blank dataframe) then update it rather than appending to it.  
+
+### "I run out of RAM using R"
+tidyverse functions don't modify in place, they copy and then (once verified as good) delete the old. This takes 2x the space! 
+- Use a totally different package, like data.table, that is built for speed and modifies in place.
+
+
+### "Are there better versions of R?" (yes, there are)
+Vanilla R is the slowest R. It assumes your CPU has no math coprocessing. Matrix manipulations cannot get slower.  
+a - Speed up your processing. Try Microsoft R Open for BLAS (basic linear algebra subprograms) + Intel math kernel libraries. Other BLAS packs (OpenBLAS for general CPUs, NVBLAS for NVidia GPUs) are available too.  
+
+b - Speed up your data structures. data.table has a lot of efficiency tweaks.  
+
+c - Speed up your data IO. Big data solutions that abstract from/with R: Spark, RevolutionR/ScaleR/MRS/AzureR/Rocker/H2O. 
+
+d - all of the above. Use MRO with data.table. Data IO is constantly changing, but can be significant. 
+
+e - "future" package (in development now) for de-serializing programs (or doParallel or foreach).  
+
+
+## One last section...."I gave up on R because it made me angry"  
+![Don't hit it with an ax yet. Things are already better.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/TrabantDestruction.JPG)  
+  
+### "R isn't performing the function correctly!" "It ran yesterday."  
+
+####Be explicit about which library's function you want!  
+Do this: **data1 %>% dplyr::select(col1)**  
+Not this: **data1 %>% select(col1)**  
+
+Code breaks when two loaded packages share a function name.  
+  
+6,601 results for functions named "select"  
+https://www.rdocumentation.org/search?q=select&latest=1  
+
+
+### R has improved since 2016!  
+Rstudio V1.x  
+- Accidentally printing a huge output will no longer crash/cause issues  
+- No longer freezes  
+- Lots of added features (environment windows, connections  
+
+tidyverse (now one library) has taken over.  
+Forget about the first package suggested by Google. Get the first package suggested by rstudio. It will likely be tidyverse.  
+
+Lots of improvements to applying functions to data at scale  
+apply functions are still neato, but you can iterate and use lists better than ever (purrr, broom, etc)  
+  
+New and useful for time series data:  tsibble  
+
+  
+## dRive in style!!! Be capable, fast, and frustration-free!  
+![True style.](C:/Users/NeilD/Google Drive/R/Presentation/Apr2019_DefrustratingR/TrabantLimo.JPG)  
+
